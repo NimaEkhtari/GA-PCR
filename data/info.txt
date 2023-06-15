@@ -1,0 +1,5 @@
+The simulated displacements are:
+
+ShiftX =  0.60
+ShiftY = -0.30
+ShiftZ =  0.20

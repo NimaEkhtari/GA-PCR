@@ -11,16 +11,19 @@ import json
 import GA
 
 
-fixed_file = r'D:\Working\BAA\Task 6\6.3\From Craig\cloudb.ply'
-moving_file = r'D:\Working\BAA\Task 6\6.3\From Craig\clouda.ply'
-output_file = r'D:\Working\BAA\Task 6\6.3\From Craig\output.txt'
+# fixed_file = r'D:\Working\BAA\Task 6\6.3\From Craig\cloudb.ply'
+# moving_file = r'D:\Working\BAA\Task 6\6.3\From Craig\clouda.ply'
+# output_file = r'D:\Working\BAA\Task 6\6.3\From Craig\output.txt'
 
+fixed_file =  r'.\data\fixed.laz'
+moving_file = r'.\data\moving.laz'
+output_file = r'.\data\output.txt'
 
 
 
 reader1 = [
     {
-        "type":"readers.ply",
+        "type":"readers.las",
         "filename":fixed_file
     },
     {
@@ -46,7 +49,7 @@ Normal = np.vstack([NX, NY, NZ]).T
 # Read in The Moving Dataset - Smaller, Don't Need Normals
 reader2 = [
     {
-        "type":"readers.ply",
+        "type":"readers.las",
         "filename":moving_file
     }
 ]
