@@ -8,6 +8,7 @@ import numpy as np
 import faiss
 from tqdm import tqdm
 from time import sleep
+import matplotlib.pyplot as plt
 
 
 class GA:
@@ -19,7 +20,7 @@ class GA:
         self.output = output
         
         self.config = config
-        self.scales = np.array([np.pi / 6, np.pi / 6, np.pi / 6, 2, 2, 2])
+        self.scales = np.array([np.pi / 6, np.pi / 6, np.pi / 6, 1, 1, 1])
         
         self.population = None
         self.ind = None
@@ -54,9 +55,21 @@ class GA:
                         condition = False
                         print('early stopping initiated.')
                 
+                
+                if generation == 1:
+                    plt.axis([1, self.config.get("max_generations"), 0, 2])
+                    plt.title("RMSE over generations")
+                    plt.xlabel("Generations")
+                    plt.ylabel("RMSE (m)")
+                elif generation > 1:
+                    plt.plot([generation - 1, generation], 
+                             [self.score[-2], self.score[-1]], color = 'blue')
+                    plt.pause(0.05)
+                    
                 sleep(0.05)
                 pbar.update(1)
         
+        plt.show()
         self.best = [item  * self.scales for item in self.best]
 
 
@@ -129,29 +142,53 @@ class GA:
     
     
     def fitness(self):
+        if self.config.get("num_params") == 6:
+            self.rigid_body_unscaled()
+        elif self.config.get("num_params") == 3:
+            self.translation_only()
+        else:
+            print("incorrect number of parameters in config")
+            
+                
+    
+    
+    def translation_only(self):
+        
+        for i in range(self.config.get("population_size")):
+            self.transforms[i] = self.population[i, :] * self.scales
+            temp_moving = self.moving + np.asarray(self.transforms[i])
+        
+
+
+    def rigid_body_unscaled(self):
         # USE FAISS to Build a tree index for fast correspondence search
         d = 3               # Dimension of the point cloud
         k = 1               # Num closest points to search for
         
         index = faiss.IndexFlatL2(d)
         index.add(self.fixed)
+        
+        D, I = index.search(self.moving, k)
+        I = I.reshape(len(I), )
+
 
         self.get_transforms()
-        residuals = []
+        rmse = []
         for i in range(self.config.get("population_size")):
             
             P = np.hstack((self.moving, np.ones((self.moving.shape[0], 1))))
             transform = self.transforms[i]
             temp_moving = np.transpose(transform @ P.T)[:, 0:3]
             
-            D, I = index.search(temp_moving, k)
+            # D, I = index.search(temp_moving, k)
+            # I = I.reshape(len(I), )
             
-            res = np.sum((temp_moving - self.fixed[i]) * self.normal[i], axis = 1)
-            residuals.append(np.sum(res**2))
+            res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
+            rmse.append(np.sqrt(np.sum(res**2) / len(I)))
         
-        residuals = np.array(residuals)
-        self.score.append(np.min(residuals))      # Not needed anymore
-        self.best.append(self.population[np.argmin(residuals)])
+        rmse = np.asarray(rmse)
+        self.score.append(np.min(rmse))      # Not needed anymore
+        self.best.append(self.population[np.argmin(rmse)])
         
         
         

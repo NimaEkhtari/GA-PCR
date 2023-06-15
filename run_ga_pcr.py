@@ -15,9 +15,9 @@ import GA
 # moving_file = r'D:\Working\BAA\Task 6\6.3\From Craig\clouda.ply'
 # output_file = r'D:\Working\BAA\Task 6\6.3\From Craig\output.txt'
 
-fixed_file =  r'.\data\fixed.laz'
-moving_file = r'.\data\moving.laz'
-output_file = r'.\data\output.txt'
+fixed_file =  r'./data/fixed.las'
+moving_file = r'./data/moving.las'
+output_file = r'./data/output.txt'
 
 
 
@@ -79,7 +79,7 @@ fixed  = np.array([X1 - mean_x, Y1 - mean_y, Z1 - mean_z]).T
 moving = np.array([X2 - mean_x, Y2 - mean_y, Z2 - mean_z]).T
 
 
-bounds = np.array([[-1, 1], [-1, 1], [-1, 1], [-1, 1], [-1, 1], [-1, 1]])
+bounds = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]])
 
 
 config = dict([("population_size", 100),
@@ -97,11 +97,11 @@ g = GA.GA(fixed, Normal, moving, output_file, config)
 g.run_ga()
 
 
-fig = plt.figure()
-plt.plot(g.score)
+# fig = plt.figure()
+# plt.plot(g.score)
 
 ind_best = np.argmin(np.array(g.score))
-print("the best solution was reached in generation {} and equals:".format(ind_best))
+print("the best solution was reached in generation {} and equals:".format(ind_best + 1))
 print(g.best[ind_best])
 
 
