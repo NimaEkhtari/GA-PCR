@@ -79,12 +79,12 @@ fixed  = np.array([X1 - mean_x, Y1 - mean_y, Z1 - mean_z]).T
 moving = np.array([X2 - mean_x, Y2 - mean_y, Z2 - mean_z]).T
 
 
-bounds = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]])
-
+bounds6 = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]])
+bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]])
 
 config = dict([("population_size", 100),
-               ("num_params", 6),
-               ("bounds", bounds),
+               ("num_params", 3),
+               ("bounds", bounds3),
                ("selection", "random"),
                ("selection_rate", 1),
                ("cross_over", "one_point"),
@@ -101,7 +101,7 @@ g.run_ga()
 # plt.plot(g.score)
 
 ind_best = np.argmin(np.array(g.score))
-print("the best solution was reached in generation {} and equals:".format(ind_best + 1))
+print("\n the best solution was reached in generation {} with fitness score of {} and is as follows:".format(ind_best + 1, np.round(np.min(g.score), 4)))
 print(g.best[ind_best])
 
 

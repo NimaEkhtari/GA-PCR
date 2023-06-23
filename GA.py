@@ -20,7 +20,10 @@ class GA:
         self.output = output
         
         self.config = config
-        self.scales = np.array([np.pi / 6, np.pi / 6, np.pi / 6, 1, 1, 1])
+        if config.get("num_params") == 6:
+            self.scales = np.array([np.pi / 6, np.pi / 6, np.pi / 6, 1, 1, 1])
+        elif config.get("num_params") == 3:
+            self.scales = np.array([1, 1, 1])
         
         self.population = None
         self.ind = None
@@ -41,7 +44,7 @@ class GA:
                 if generation >= 1:
                     self.selection()
                     self.cross_over()
-                    # self.mutation())
+                    self.mutation()
                 
                 self.fitness()
                 generation += 1
@@ -57,7 +60,7 @@ class GA:
                 
                 
                 if generation == 1:
-                    plt.axis([1, self.config.get("max_generations"), 0, 2])
+                    plt.axis([1, self.config.get("max_generations"), 0, 0.5])
                     plt.title("RMSE over generations")
                     plt.xlabel("Generations")
                     plt.ylabel("RMSE (m)")
@@ -112,7 +115,19 @@ class GA:
     
     
     def mutation(self):
-        pass
+        ''' 
+            function to perform mutation. Which is done by randomly creating 
+            new chromosomes (similar to initialize_population routine). The
+            number of mutated chromosomes is 10% of population size
+        '''
+        n = self.config.get("population_size")
+        m = self.config.get("num_params")
+        b = self.config.get("bounds")
+        nn = int(np.floor(n * 0.1))
+        new_ch = np.random.uniform(b[:, 0], b[:, 1], (nn, m))
+        
+        inds = np.random.permutation(n)
+        self.population[inds.tolist()[:nn]] = new_ch
     
     
     def get_transforms(self):
@@ -153,10 +168,30 @@ class GA:
     
     
     def translation_only(self):
+        # USE FAISS to Build a tree index for fast correspondence search
+        d = 3               # Dimension of the point cloud
+        k = 1               # Num closest points to search for
         
+        index = faiss.IndexFlatL2(d)
+        index.add(self.fixed)
+        
+        D, I = index.search(self.moving, k)
+        I = I.reshape(len(I), )
+
+        rmse = []
         for i in range(self.config.get("population_size")):
-            self.transforms[i] = self.population[i, :] * self.scales
-            temp_moving = self.moving + np.asarray(self.transforms[i])
+            transform = self.population[i, :] * self.scales
+            temp_moving = self.moving + np.asarray(transform)
+            
+            res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
+            
+            a=np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
+            rmse.append(np.sqrt(np.sum(res[a[0]]**2) / len(I[a[0]])))
+            # rmse.append(np.sqrt(np.sum(res**2) / len(I)))
+        
+        rmse = np.asarray(rmse)
+        self.score.append(np.min(rmse))      # Not needed anymore
+        self.best.append(self.population[np.argmin(rmse)])
         
 
 
