@@ -84,13 +84,14 @@ bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]])
 
 config = dict([("population_size", 100),
                ("num_params", 3),
+               ("num_bits", 10),
                ("bounds", bounds3),
                ("selection", "random"),
                ("selection_rate", 1),
                ("cross_over", "one_point"),
                ("mutation_rate", 0.20),
                ("max_generations", 200),
-               ("epsilon", 1e-6)])
+               ("epsilon", 1e-9)])
 
 
 g = GA.GA(fixed, Normal, moving, output_file, config)

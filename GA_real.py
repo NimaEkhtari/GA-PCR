@@ -1,16 +1,17 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jun 11 14:59:26 2023
-
-@author: nekhtari
+Created on Thu Jun 22 22:48:02 2023
+This code is the original GA code that works with real number
+@author: nima
 """
+
+
 import numpy as np
 import faiss
-import random
 from tqdm import tqdm
 from time import sleep
 import matplotlib.pyplot as plt
-import tools
 
 
 class GA:
@@ -62,7 +63,7 @@ class GA:
                 
                 
                 if generation == 1:
-                    plt.axis([1, self.config.get("max_generations"), 0, 0.2])
+                    plt.axis([1, self.config.get("max_generations"), 0, 0.5])
                     plt.title("RMSE over generations")
                     plt.xlabel("Generations")
                     plt.ylabel("RMSE (m)")
@@ -78,24 +79,17 @@ class GA:
         self.best = [item  * self.scales for item in self.best]
 
 
-
-
     def initialize_population(self):
         ''' 
             function to randomly create the initial population using config
-            values. Population is a list of the size [n, ], each element is one
-            binary string of size m * b , and its values are concatenated
-            binary representations of parameters of the solution in population.
-            When config.num_params is 6, the first 3 genes are rotations, 
-            next 3 are translations.
-            When config.num_params is 3, the 3 parameters are Tx, Ty, Tz
+            values. Population is of the size [n, m], each paramter is one
+            column in this array, and its values are within specified bounds.
+            First 3 genes are rotations, next 3 are translations
         '''
         n = self.config.get("population_size")
         m = self.config.get("num_params")
         b = self.config.get("bounds")
-        P = np.random.uniform(b[:, 0], b[:, 1], (n, m))
-        b = self.config.get("num_bits")
-        self.population = tools.to_binary(P, b)
+        self.population = np.random.uniform(b[:, 0], b[:, 1], (n, m))
         
     
     def selection(self):
@@ -109,50 +103,34 @@ class GA:
             k = len(self.ind)
             n = self.config.get("population_size")
             m = self.config.get("num_params")
-            b = self.config.get("num_bits")
-            l = int(m * b)
             idx = np.arange(k, n)
             
             ch = self.population.copy()
-            p1 = [ch[i] for i in self.ind]
-            p2 = [ch[i] for i in idx]
+            p1 = ch[self.ind].tolist()
+            p2 = ch[idx].tolist()
             
-
-            r = np.random.randint(1, l-1, k)        # Ensuring first and last genne won't be the cross over point
-            os1, os2 = [], []
+            r = np.random.randint(1, m-1, k)        # Ensuring first and last genne won't be the cross over point
+            os1, os2 = np.zeros((k, m)), np.zeros((k, m))
             for i in range(k):
-                os1.append(p1[i][:r[i]] + p2[i][r[i]:])
-                os2.append(p2[i][:r[i]] + p1[i][r[i]:])
-            next_gen = os1 + os2
-            self.population = next_gen
+                os1[i] = p1[i][:r[i]] + p2[i][r[i]:]
+                os2[i] = p2[i][:r[i]] + p1[i][r[i]:]
+            self.population = np.vstack((os1, os2))
     
-
-
-
     
     def mutation(self):
         ''' 
-            fThis function performs the bit flip mutation in which 1/m*b 
-            chromosomes are randomly selected to have a bit flipped.
+            function to perform mutation. Which is done by randomly creating 
+            new chromosomes (similar to initialize_population routine). The
+            number of mutated chromosomes is 10% of population size
         '''
         n = self.config.get("population_size")
         m = self.config.get("num_params")
-        b = self.config.get("num_bits")
-        l = int(m * b)
-        mp = 1 / l    # Mutation probability set to 1 over length of chromosome
+        b = self.config.get("bounds")
+        nn = int(np.floor(n * 0.1))
+        new_ch = np.random.uniform(b[:, 0], b[:, 1], (nn, m))
         
-        num_mutate = int(np.ceil(mp * n))
-        ind_ch = np.random.randint(0, n, num_mutate)
-        ind_ge = np.random.randint(0, l, num_mutate)
-        c = 0
-        for i in ind_ch:
-            s = self.population[i]
-            if s[ind_ge[c]] == '0':
-                self.population[i] = s[: ind_ge[c]] + '1' + s[ind_ge[c] + 1 :]
-            else:
-                self.population[i] = s[: ind_ge[c]] + '0' + s[ind_ge[c] + 1 :]
-            c += 1
-
+        inds = np.random.permutation(n)
+        self.population[inds.tolist()[:nn]] = new_ch
     
     
     def get_transforms(self):
@@ -202,24 +180,21 @@ class GA:
         
         D, I = index.search(self.moving, k)
         I = I.reshape(len(I), )
-        
-        translations = tools.to_array(self.population, self.config.get("num_bits"))
-        
+
         rmse = []
         for i in range(self.config.get("population_size")):
-            transform = translations[i, :] * self.scales
+            transform = self.population[i, :] * self.scales
             temp_moving = self.moving + np.asarray(transform)
             
             res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
             
-            a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
+            a=np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
             rmse.append(np.sqrt(np.sum(res[a[0]]**2) / len(I[a[0]])))
             # rmse.append(np.sqrt(np.sum(res**2) / len(I)))
         
         rmse = np.asarray(rmse)
         self.score.append(np.min(rmse))      # Not needed anymore
-        self.best.append(translations[np.argmin(rmse)])
-
+        self.best.append(self.population[np.argmin(rmse)])
         
 
 
@@ -280,5 +255,4 @@ class GA:
         # A = self.fixed[I]
 
             
-
 
