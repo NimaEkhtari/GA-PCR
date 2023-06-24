@@ -9,8 +9,8 @@ import numpy as np
 
 def to_binary(array, nb):
 
-    offset = (2 ** nb -1) / 2
-    ar = (array * offset) + offset
+    scale = (2 ** nb) -1
+    ar = ((array + 3) / 6) * scale
     arr = np.int16(np.round(ar))
     
     b = []
@@ -34,9 +34,8 @@ def to_array(bits, nb):
         a = [int(c, 2) for c in ch]
         Arr.append(a)
 
-    
-    offset = (2 ** nb -1) / 2
-    A = (np.array(Arr) - offset) / offset
+    scale = (2 ** nb) - 1
+    A = ((np.array(Arr) / scale) * 6) - 3
     
     return A
         

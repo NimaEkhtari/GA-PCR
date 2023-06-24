@@ -80,7 +80,7 @@ moving = np.array([X2 - mean_x, Y2 - mean_y, Z2 - mean_z]).T
 
 
 bounds6 = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]])
-bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]])
+bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 3
 
 config = dict([("population_size", 100),
                ("num_params", 3),
