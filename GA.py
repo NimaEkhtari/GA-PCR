@@ -31,7 +31,10 @@ class GA:
         self.ind = None
         self.transforms = []
         self.score = []
-        self.best = []
+        self.best = None
+        self.best_ch = None
+        self.ind_best = 0
+        self.best_transform = None
         
     
     def run_ga(self):
@@ -47,22 +50,17 @@ class GA:
                     self.selection()
                     self.cross_over()
                     self.mutation()
+                    self.carry_best()
                 
                 self.fitness()
                 generation += 1
                 
                 if generation >= max_gen:
                     condition = False
-                if generation >= 2:
-                    b2 = np.array(self.best[-2])
-                    b1 = np.array(self.best[-1])
-                    if (np.abs(b1 - b2) < self.config.get("epsilon")).all():
-                        condition = False
-                        print('early stopping initiated.')
                 
                 
                 if generation == 1:
-                    plt.axis([1, self.config.get("max_generations"), 0, 0.2])
+                    plt.axis([1, self.config.get("max_generations"), 0, 0.5])
                     plt.title("RMSE over generations")
                     plt.xlabel("Generations")
                     plt.ylabel("RMSE (m)")
@@ -75,7 +73,7 @@ class GA:
                 pbar.update(1)
         
         plt.show()
-        self.best = [item  * self.scales for item in self.best]
+        self.best = self.best * self.scales
 
 
 
@@ -103,6 +101,8 @@ class GA:
             ns = int((self.config.get("population_size") * self.config.get("selection_rate")) / 2)
             self.ind = np.random.permutation(ns)
     
+
+
     
     def cross_over(self):
         if self.config.get("cross_over") == "one_point":
@@ -139,7 +139,7 @@ class GA:
         m = self.config.get("num_params")
         b = self.config.get("num_bits")
         l = int(m * b)
-        mp = 1 / l    # Mutation probability set to 1 over length of chromosome
+        mp = (1 / l) * 20    # Mutation probability set to 1 over length of chromosome
         
         num_mutate = int(np.ceil(mp * n))
         ind_ch = np.random.randint(0, n, num_mutate)
@@ -154,11 +154,22 @@ class GA:
             c += 1
 
     
-    
+
+    def carry_best(self):
+        n = self.config.get("population_size")
+        
+        ind = np.random.randint(0, n, 1)[0]
+        self.population[ind] = self.best_ch
+
+ 
+
+   
     def get_transforms(self):
+        
+        population = tools.to_array(self.population, self.config.get("num_bits"))
         self.transforms = []
         for i in range(self.config.get("population_size")):
-            x = self.population[i, :] * self.scales
+            x = population[i, :] * self.scales
             R = np.eye(3)
             T = np.zeros(3)
             R[0, 0] =  np.cos(x[2]) * np.cos(x[1])
@@ -179,6 +190,7 @@ class GA:
             transform[:3, 3] = T
             self.transforms.append(transform)
     
+ 
     
     
     def fitness(self):
@@ -200,8 +212,14 @@ class GA:
         index = faiss.IndexFlatL2(d)
         index.add(self.fixed)
         
-        D, I = index.search(self.moving, k)
-        I = I.reshape(len(I), )
+        # Starting from the second generation, move the point cloud according to last best
+        if self.best is None:
+            temp_moving = self.moving
+        else:
+            temp_moving = self.moving + np.asarray(self.best)
+        
+        # D, I = index.search(temp_moving, k)
+        # I = I.reshape(len(I), )
         
         translations = tools.to_array(self.population, self.config.get("num_bits"))
         
@@ -210,15 +228,20 @@ class GA:
             transform = translations[i, :] * self.scales
             temp_moving = self.moving + np.asarray(transform)
             
-            res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
+            D, I = index.search(temp_moving, k)
+            I = I.reshape(len(I), )
             
-            a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
-            rmse.append(np.sqrt(np.sum(res[a[0]]**2) / len(I[a[0]])))
-            # rmse.append(np.sqrt(np.sum(res**2) / len(I)))
+            
+            res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
+            # a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
+            # rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
+            rmse.append(np.sqrt(np.sum(res**2) / len(I)))
         
         rmse = np.asarray(rmse)
         self.score.append(np.min(rmse))      # Not needed anymore
-        self.best.append(translations[np.argmin(rmse)])
+        self.ind_best = np.argmin(rmse)
+        self.best = translations[self.ind_best]
+        self.best_ch = self.population[self.ind_best]
 
         
 
@@ -230,9 +253,15 @@ class GA:
         
         index = faiss.IndexFlatL2(d)
         index.add(self.fixed)
+
+        if self.best is None:
+            temp_moving = self.moving
+        else:
+            P = np.hstack((self.moving, np.ones((self.moving.shape[0], 1))))
+            temp_moving = np.transpose(self.best_transform @ P.T)[:, 0:3]
         
-        D, I = index.search(self.moving, k)
-        I = I.reshape(len(I), )
+        # D, I = index.search(temp_moving, k)
+        # I = I.reshape(len(I), )
 
 
         self.get_transforms()
@@ -243,16 +272,21 @@ class GA:
             transform = self.transforms[i]
             temp_moving = np.transpose(transform @ P.T)[:, 0:3]
             
-            # D, I = index.search(temp_moving, k)
-            # I = I.reshape(len(I), )
+            D, I = index.search(temp_moving, k)
+            I = I.reshape(len(I), )
             
             res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
-            rmse.append(np.sqrt(np.sum(res**2) / len(I)))
+            a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
+            rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
         
         rmse = np.asarray(rmse)
         self.score.append(np.min(rmse))      # Not needed anymore
-        self.best.append(self.population[np.argmin(rmse)])
+        self.ind_best = np.argmin(rmse)
         
+        self.best = tools.to_array(self.population[self.ind_best], self.config.get("num_bits"))
+        
+        self.best_ch = self.population[self.ind_best]
+        self.best_transform = self.transforms[self.ind_best]
         
         
         # b1 = np.sum(self.fixed * self.normals, axis=1)

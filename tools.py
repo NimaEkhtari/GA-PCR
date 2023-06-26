@@ -27,6 +27,9 @@ def to_binary(array, nb):
 
 
 def to_array(bits, nb):
+    # ensure bits is a list
+    if type(bits) is not list:
+        bits = [bits]
     Arr = []
     for b in bits:
         ch = [b[i : i + nb] for i in range(0, len(b), nb)]
