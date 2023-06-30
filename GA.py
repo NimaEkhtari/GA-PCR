@@ -235,7 +235,10 @@ class GA:
             res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
             # a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
             # rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
-            rmse.append(np.sqrt(np.sum(res**2) / len(I)))
+            
+            a = np.where((D > np.percentile(D, 90)) | (D < np.percentile(D, 10)))
+            rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
+            # rmse.append(np.sqrt(np.sum(res**2) / len(I)))
         
         rmse = np.asarray(rmse)
         self.score.append(np.min(rmse))      # Not needed anymore
@@ -276,8 +279,12 @@ class GA:
             I = I.reshape(len(I), )
             
             res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
-            a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
+            
+            a = np.where((D > np.percentile(D, 90)) | (D < np.percentile(D, 10)))
             rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
+            
+            # a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
+            # rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
         
         rmse = np.asarray(rmse)
         self.score.append(np.min(rmse))      # Not needed anymore
