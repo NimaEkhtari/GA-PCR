@@ -88,7 +88,7 @@ config = dict([("population_size", 100),
                ("bounds", bounds6),
                ("selection", "random"),
                ("selection_rate", 1),
-               ("cross_over", "one_point"),
+               ("cross_over", "two_point"),
                ("mutation_rate", 0.20),
                ("max_generations", 100),
                ("epsilon", 1e-9)])

@@ -105,26 +105,39 @@ class GA:
 
     
     def cross_over(self):
-        if self.config.get("cross_over") == "one_point":
-            k = len(self.ind)
-            n = self.config.get("population_size")
-            m = self.config.get("num_params")
-            b = self.config.get("num_bits")
-            l = int(m * b)
-            idx = np.arange(k, n)
-            
-            ch = self.population.copy()
-            p1 = [ch[i] for i in self.ind]
-            p2 = [ch[i] for i in idx]
-            
 
+        k = len(self.ind)
+        n = self.config.get("population_size")
+        m = self.config.get("num_params")
+        b = self.config.get("num_bits")
+        l = int(m * b)
+        idx = np.arange(k, n)
+        
+        ch = self.population.copy()
+        p1 = [ch[i] for i in self.ind]
+        p2 = [ch[i] for i in idx]
+           
+        
+        
+        if self.config.get("cross_over") == "one_point":
             r = np.random.randint(1, l-1, k)        # Ensuring first and last genne won't be the cross over point
             os1, os2 = [], []
             for i in range(k):
                 os1.append(p1[i][:r[i]] + p2[i][r[i]:])
                 os2.append(p2[i][:r[i]] + p1[i][r[i]:])
             next_gen = os1 + os2
-            self.population = next_gen
+            
+            
+        if self.config.get("cross_over") == "two_point":   
+            r = np.random.randint(1, l-1, (k, 2))
+            r.sort(axis = 1)
+            os1, os2 = [], []
+            for i in range(k):
+                os1.append(p1[i][:r[i,0]] + p2[i][r[i,0]:r[i,1]] + p1[i][r[i,1]:])
+                os2.append(p2[i][:r[i,0]] + p1[i][r[i,0]:r[i,1]] + p2[i][r[i,1]:])
+            next_gen = os1 + os2
+            
+        self.population = next_gen
     
 
 
