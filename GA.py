@@ -145,7 +145,7 @@ class GA:
     
     def mutation(self):
         ''' 
-            fThis function performs the bit flip mutation in which 1/m*b 
+            This function performs the bit flip mutation in which 1/m*b 
             chromosomes are randomly selected to have a bit flipped.
         '''
         n = self.config.get("population_size")
@@ -293,11 +293,11 @@ class GA:
             
             res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
             
-            a = np.where((D > np.percentile(D, 90)) | (D < np.percentile(D, 10)))
-            rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
-            
-            # a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
+            # a = np.where((D > np.percentile(D, 90)) | (D < np.percentile(D, 10)))
             # rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
+            
+            a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
+            rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
         
         rmse = np.asarray(rmse)
         self.score.append(np.min(rmse))      # Not needed anymore

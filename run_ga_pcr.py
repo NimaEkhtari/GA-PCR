@@ -83,14 +83,14 @@ bounds6 = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1
 bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 3
 
 config = dict([("population_size", 100),
-               ("num_params", 6),
+               ("num_params", 3),
                ("num_bits", 10),
-               ("bounds", bounds6),
+               ("bounds", bounds3),
                ("selection", "random"),
                ("selection_rate", 1),
                ("cross_over", "two_point"),
                ("mutation_rate", 0.20),
-               ("max_generations", 100),
+               ("max_generations", 30),
                ("epsilon", 1e-9)])
 
 
