@@ -11,6 +11,7 @@ from tqdm import tqdm
 from time import sleep
 import matplotlib.pyplot as plt
 import tools
+import random
 
 
 class GA:
@@ -29,6 +30,7 @@ class GA:
         
         self.population = None
         self.ind = None
+        self.idx = None
         self.transforms = []
         self.score = []
         self.best = None
@@ -52,7 +54,7 @@ class GA:
                     self.mutation()
                     self.carry_best()
                 
-                self.fitness()
+                self.calc_fitness()
                 generation += 1
                 
                 if generation >= max_gen:
@@ -100,24 +102,57 @@ class GA:
         if self.config.get("selection") == "random":
             ns = int((self.config.get("population_size") * self.config.get("selection_rate")) / 2)
             self.ind = np.random.permutation(ns)
-    
+            k = len(self.ind)
+            n = self.config.get("population_size")
+            self.idx = np.arange(k, n)
+            
+            
+        if self.config.get("selection") == "roulette wheel":
+            self.Fit = self.fitness
+            self.Pop = self.population
+            par, i = self.rw_selection()
+            self.ind = i[:50]
+            self.idx = i[50:]
+        
 
 
-    
+    def rw_selection(self):
+        total_fitness = sum(self.Fit)
+        rand_nums = np.random.uniform(0, total_fitness, 100)
+        np.random.shuffle(rand_nums)
+        
+        selected_individual, inds = [], []
+        for rand_num in rand_nums:
+            # Initialize variables for cumulative fitness and selected index
+            cumulative_fitness = 0
+            selected_index = 0
+        
+            # Iterate through the population to find the selected index
+            for i, fitness in enumerate(self.Fit):
+                cumulative_fitness += fitness
+                if cumulative_fitness >= rand_num:
+                    selected_index = i
+                    break
+        
+            # Return the selected individual from the population
+            selected_individual.append(self.Pop[selected_index])
+            inds.append(selected_index)
+        return (selected_individual, inds)
+            
+
+
+
+
     def cross_over(self):
-
-        k = len(self.ind)
-        n = self.config.get("population_size")
         m = self.config.get("num_params")
         b = self.config.get("num_bits")
         l = int(m * b)
-        idx = np.arange(k, n)
+        k = len(self.ind)
         
         ch = self.population.copy()
         p1 = [ch[i] for i in self.ind]
-        p2 = [ch[i] for i in idx]
+        p2 = [ch[i] for i in self.idx]
            
-        
         
         if self.config.get("cross_over") == "one_point":
             r = np.random.randint(1, l-1, k)        # Ensuring first and last genne won't be the cross over point
@@ -206,7 +241,7 @@ class GA:
  
     
     
-    def fitness(self):
+    def calc_fitness(self):
         if self.config.get("num_params") == 6:
             self.rigid_body_unscaled()
         elif self.config.get("num_params") == 3:
@@ -246,14 +281,16 @@ class GA:
             
             
             res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
+            
             # a = np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
             # rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
             
-            a = np.where((D > np.percentile(D, 90)) | (D < np.percentile(D, 10)))
-            rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
-            # rmse.append(np.sqrt(np.sum(res**2) / len(I)))
+            # a = np.where((D > np.percentile(D, 90)) | (D < np.percentile(D, 10)))
+            # rmse.append(np.sqrt(np.sum(res[a[0]] ** 2) / len(I[a[0]])))
+            rmse.append(np.sqrt(np.sum(res**2) / len(I)))
         
         rmse = np.asarray(rmse)
+        self.fitness = rmse
         self.score.append(np.min(rmse))      # Not needed anymore
         self.ind_best = np.argmin(rmse)
         self.best = translations[self.ind_best]
