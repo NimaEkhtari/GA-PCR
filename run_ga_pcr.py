@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pdal
 import json
-import GA
+import GA_real
 
 
 # fixed_file = r'D:\Working\BAA\Task 6\6.3\From Craig\cloudb.ply'
@@ -80,7 +80,7 @@ moving = np.array([X2 - mean_x, Y2 - mean_y, Z2 - mean_z]).T
 
 
 bounds6 = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]]) * 3
-bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 3
+bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 1
 
 config = dict([("population_size", 100),
                ("num_params", 3),
@@ -90,11 +90,11 @@ config = dict([("population_size", 100),
                ("selection_rate", 1),
                ("cross_over", "two_point"),
                ("mutation_rate", 0.20),
-               ("max_generations", 30),
+               ("max_generations", 50),
                ("epsilon", 1e-9)])
 
 
-g = GA.GA(fixed, Normal, moving, output_file, config)
+g = GA_real.GA(fixed, Normal, moving, output_file, config)
 g.run_ga()
 
 

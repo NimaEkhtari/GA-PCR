@@ -28,11 +28,15 @@ class GA:
         elif config.get("num_params") == 3:
             self.scales = np.array([1, 1, 1])
         
+        self.Pop = None
+        self.Fit = None
+        self.fitness = None
         self.population = None
-        self.ind = None
+        self.p1_ind = None
+        self.p2_ind = None
         self.transforms = []
         self.score = []
-        self.best = []
+        self.best = None
         
     
     def run_ga(self):
@@ -48,8 +52,9 @@ class GA:
                     self.selection()
                     self.cross_over()
                     self.mutation()
+                    self.carry_best()
                 
-                self.fitness()
+                self.calc_fitness()
                 generation += 1
                 
                 if generation >= max_gen:
@@ -76,7 +81,8 @@ class GA:
                 pbar.update(1)
         
         plt.show()
-        self.best = [item  * self.scales for item in self.best]
+        self.best = self.best * self.scales
+        # self.best = [item  * self.scales for item in self.best]
 
 
     def initialize_population(self):
@@ -96,25 +102,56 @@ class GA:
         if self.config.get("selection") == "random":
             ns = int((self.config.get("population_size") * self.config.get("selection_rate")) / 2)
             self.ind = np.random.permutation(ns)
+            
+        if self.config.get("selection") == "roulette wheel":
+            self.Fit = self.fitness
+            self.Pop = self.population
+            par, i = self.rw_selection()
+            self.p1_ind = i[:50]
+            self.p2_ind = i[50:]
     
+
+
+    def rw_selection(self):
+        total_fitness = sum(self.Fit)
+        rand_nums = np.random.uniform(0, total_fitness, 100)
+        np.random.shuffle(rand_nums)
+        
+        selected_individual, inds = [], []
+        for rand_num in rand_nums:
+            # Initialize variables for cumulative fitness and selected index
+            cumulative_fitness = 0
+            selected_index = 0
+        
+            # Iterate through the population to find the selected index
+            for i, fitness in enumerate(self.Fit):
+                cumulative_fitness += fitness
+                if cumulative_fitness >= rand_num:
+                    selected_index = i
+                    break
+        
+            # Return the selected individual from the population
+            selected_individual.append(self.Pop[selected_index])
+            inds.append(selected_index)
+        return (selected_individual, inds)
+
+
+
     
     def cross_over(self):
-        if self.config.get("cross_over") == "one_point":
-            k = len(self.ind)
-            n = self.config.get("population_size")
-            m = self.config.get("num_params")
-            idx = np.arange(k, n)
-            
-            ch = self.population.copy()
-            p1 = ch[self.ind].tolist()
-            p2 = ch[idx].tolist()
-            
-            r = np.random.randint(1, m-1, k)        # Ensuring first and last genne won't be the cross over point
-            os1, os2 = np.zeros((k, m)), np.zeros((k, m))
-            for i in range(k):
-                os1[i] = p1[i][:r[i]] + p2[i][r[i]:]
-                os2[i] = p2[i][:r[i]] + p1[i][r[i]:]
-            self.population = np.vstack((os1, os2))
+        n = self.config.get("population_size")
+        t1 = np.random.uniform(0, 1, n*5)
+        t2 = np.random.permutation(t1)
+        t3 = t2[0 : int(n/2)]
+        t4 = t2[int(n/2) :n]
+        
+        P1 = self.population[self.p1_ind, :]
+        P2 = self.population[self.p2_ind, :]
+        O1 = P1 + (t3[:, np.newaxis] * (P2 - P1))
+        O2 = P1 + (t4[:, np.newaxis] * (P2 - P1))
+        
+        self.population = np.vstack((O1, O2))
+
     
     
     def mutation(self):
@@ -159,7 +196,7 @@ class GA:
     
     
     
-    def fitness(self):
+    def calc_fitness(self):
         if self.config.get("num_params") == 6:
             self.rigid_body_unscaled()
         elif self.config.get("num_params") == 3:
@@ -168,7 +205,14 @@ class GA:
             print("incorrect number of parameters in config")
             
                 
-    
+
+    def carry_best(self):
+        n = self.config.get("population_size")
+        
+        ind = np.random.randint(0, n, 1)[0]
+        self.population[ind] = self.best_ch
+        
+
     
     def translation_only(self):
         # USE FAISS to Build a tree index for fast correspondence search
@@ -178,24 +222,35 @@ class GA:
         index = faiss.IndexFlatL2(d)
         index.add(self.fixed)
         
-        D, I = index.search(self.moving, k)
-        I = I.reshape(len(I), )
-
+        # Starting from the second generation, move the point cloud according to last best
+        if self.best is None:
+            temp_moving = self.moving
+        else:
+            temp_moving = self.moving + np.asarray(self.best)
+        
+        # D, I = index.search(temp_moving, k)
+        # I = I.reshape(len(I), )
+        
+        translations = self.population
+        
         rmse = []
         for i in range(self.config.get("population_size")):
-            transform = self.population[i, :] * self.scales
+            transform = translations[i, :] * self.scales
             temp_moving = self.moving + np.asarray(transform)
             
-            res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
+            D, I = index.search(temp_moving, k)
+            I = I.reshape(len(I), )
             
-            a=np.where((res > (np.mean(res) - (3 * np.std(res)))) & (res < (np.mean(res) + (3 * np.std(res)))))
-            rmse.append(np.sqrt(np.sum(res[a[0]]**2) / len(I[a[0]])))
-            # rmse.append(np.sqrt(np.sum(res**2) / len(I)))
+            
+            res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
+            rmse.append(np.sqrt(np.sum(res**2) / len(I)))
         
         rmse = np.asarray(rmse)
+        self.fitness = rmse
         self.score.append(np.min(rmse))      # Not needed anymore
-        self.best.append(self.population[np.argmin(rmse)])
-        
+        self.ind_best = np.argmin(rmse)
+        self.best = translations[self.ind_best]
+        self.best_ch = self.population[self.ind_best]
 
 
     def rigid_body_unscaled(self):
