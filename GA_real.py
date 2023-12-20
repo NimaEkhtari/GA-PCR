@@ -8,9 +8,10 @@ This code is the original GA code that works with real number
 
 
 import numpy as np
-import faiss
+#import faiss
 from tqdm import tqdm
 from time import sleep
+from sklearn.neighbors import KDTree
 import matplotlib.pyplot as plt
 
 
@@ -219,18 +220,7 @@ class GA:
         d = 3               # Dimension of the point cloud
         k = 1               # Num closest points to search for
         
-        index = faiss.IndexFlatL2(d)
-        index.add(self.fixed)
-        
-        # Starting from the second generation, move the point cloud according to last best
-        if self.best is None:
-            temp_moving = self.moving
-        else:
-            temp_moving = self.moving + np.asarray(self.best)
-        
-        # D, I = index.search(temp_moving, k)
-        # I = I.reshape(len(I), )
-        
+        kdtree = KDTree(self.fixed)
         translations = self.population
         
         rmse = []
@@ -238,8 +228,8 @@ class GA:
             transform = translations[i, :] * self.scales
             temp_moving = self.moving + np.asarray(transform)
             
-            D, I = index.search(temp_moving, k)
-            I = I.reshape(len(I), )
+            D, I = kdtree.query(temp_moving, k = k)
+            # I = I.reshape(len(I), )
             
             
             res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
