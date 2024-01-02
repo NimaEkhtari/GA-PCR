@@ -8,7 +8,7 @@ This code is the original GA code that works with real number
 
 
 import numpy as np
-#import faiss
+import faiss
 from tqdm import tqdm
 from time import sleep
 from sklearn.neighbors import KDTree
@@ -42,9 +42,8 @@ class GA:
     
     def run_ga(self):
         self.initialize_population()
-        
+        generation = self.config.get("generation")
         max_gen = self.config.get("max_generations")
-        generation = 0
         condition = True
         with tqdm(total = max_gen) as pbar:
             while condition:
@@ -108,14 +107,15 @@ class GA:
             self.Fit = self.fitness
             self.Pop = self.population
             par, i = self.rw_selection()
-            self.p1_ind = i[:50]
-            self.p2_ind = i[50:]
+            N = int(self.config.get("population_size") / 2)
+            self.p1_ind = i[:N]
+            self.p2_ind = i[N:]
     
 
 
     def rw_selection(self):
         total_fitness = sum(self.Fit)
-        rand_nums = np.random.uniform(0, total_fitness, 100)
+        rand_nums = np.random.uniform(0, total_fitness, self.config.get("population_size") )
         np.random.shuffle(rand_nums)
         
         selected_individual, inds = [], []
@@ -141,7 +141,7 @@ class GA:
     
     def cross_over(self):
         n = self.config.get("population_size")
-        t1 = np.random.uniform(0, 1, n*5)
+        t1 = np.random.normal(0, 0.05, n * 2)
         t2 = np.random.permutation(t1)
         t3 = t2[0 : int(n/2)]
         t4 = t2[int(n/2) :n]
@@ -149,7 +149,7 @@ class GA:
         P1 = self.population[self.p1_ind, :]
         P2 = self.population[self.p2_ind, :]
         O1 = P1 + (t3[:, np.newaxis] * (P2 - P1))
-        O2 = P1 + (t4[:, np.newaxis] * (P2 - P1))
+        O2 = P2 + (t4[:, np.newaxis] * (P2 - P1))
         
         self.population = np.vstack((O1, O2))
 
@@ -163,12 +163,25 @@ class GA:
         '''
         n = self.config.get("population_size")
         m = self.config.get("num_params")
+        r = self.config.get("mutation_rate")
         b = self.config.get("bounds")
-        nn = int(np.floor(n * 0.1))
-        new_ch = np.random.uniform(b[:, 0], b[:, 1], (nn, m))
+        nn = int(np.floor(n * m * r))
         
-        inds = np.random.permutation(n)
-        self.population[inds.tolist()[:nn]] = new_ch
+        
+        inds = np.random.permutation(int(n * m))
+        ind = inds[:nn]
+        
+        # Adaptive mutation
+        mg = self.config.get("max_generations")
+        g = self.config.get("generation")
+        M = (mg - g) / mg / 10
+        mute = np.random.normal(0, M, int(n * m))
+        
+        q = self.population.reshape(int(n * m), )
+        q[ind] = q[ind] + mute[ind]
+        
+        self.population = q.reshape((n, m))
+
     
     
     def get_transforms(self):
@@ -229,6 +242,7 @@ class GA:
             temp_moving = self.moving + np.asarray(transform)
             
             D, I = kdtree.query(temp_moving, k = k)
+            I = np.ravel(I)
             # I = I.reshape(len(I), )
             
             
