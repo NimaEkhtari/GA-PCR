@@ -10,7 +10,7 @@ import pdal
 import json
 import GA_real
 from numpy.random import seed
-seed(0)
+# seed(100000000)
 
 # fixed_file = r'D:\Working\BAA\Task 6\6.3\From Craig\cloudb.ply'
 # moving_file = r'D:\Working\BAA\Task 6\6.3\From Craig\clouda.ply'
@@ -83,7 +83,7 @@ moving = np.array([X2 - mean_x, Y2 - mean_y, Z2 - mean_z]).T
 bounds6 = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]]) * 3
 bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 3
 
-config = dict([("population_size", 30),
+config = dict([("population_size", 50),
                ("num_params", 3),
                ("num_bits", 10),
                ("bounds", bounds3),
@@ -91,9 +91,8 @@ config = dict([("population_size", 30),
                ("selection_rate", 1),
                ("cross_over", "two_point"),
                ("mutation_rate", 0.05),
-               ("max_generations", 100),
-               ("epsilon", 1e-9),
-               ("generation", 0)],)
+               ("max_generations", 10),
+               ("epsilon", 1e-9)],)
 
 
 g = GA_real.GA(fixed, Normal, moving, output_file, config)

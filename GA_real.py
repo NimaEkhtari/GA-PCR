@@ -38,28 +38,60 @@ class GA:
         self.transforms = []
         self.score = []
         self.best = None
+        self.generation = 0
         
     
     def run_ga(self):
+        
         self.initialize_population()
-        generation = self.config.get("generation")
+
         max_gen = self.config.get("max_generations")
         condition = True
         with tqdm(total = max_gen) as pbar:
             while condition:
                 
-                if generation >= 1:
+                if self.generation >= 1:
+                    # ax = plt.figure().add_subplot(projection='3d')
+                    # x = self.population[:, 0]
+                    # y = self.population[:, 1]
+                    # z = self.population[:, 2]
+                    # ax.scatter(x, y, z, c =  self.config.get("population_size") * ['b'])
+
                     self.selection()
+                    # for i in range(round(self.config.get("population_size") / 2)):
+                            
+                        # x = [self.population[self.p1_ind[i], 0], self.population[self.p2_ind[i], 0]]
+                        # y = [self.population[self.p1_ind[i], 1], self.population[self.p2_ind[i], 1]]
+                        # z = [self.population[self.p1_ind[i], 2], self.population[self.p2_ind[i], 2]]
+                        # ax.plot(x, y, zs=z)
+                    
                     self.cross_over()
+                    # x = self.population[:, 0]
+                    # y = self.population[:, 1]
+                    # z = self.population[:, 2]
+                    # ax.scatter(x, y, z, c =  self.config.get("population_size") * ['r'])
+                    # plt.show()
+                    
                     self.mutation()
+                    # x = self.population[:, 0]
+                    # y = self.population[:, 1]
+                    # z = self.population[:, 2]
+                    # ax.scatter(x, y, z, c =  self.config.get("population_size") * ['g'])
+                    # plt.show()
+                    
                     self.carry_best()
                 
                 self.calc_fitness()
-                generation += 1
+                self.generation += 1
                 
-                if generation >= max_gen:
+                if self.generation == 10:
+                    print('stop')
+                
+                
+                
+                if self.generation >= max_gen:
                     condition = False
-                if generation >= 2:
+                if self.generation >= 2:
                     b2 = np.array(self.best[-2])
                     b1 = np.array(self.best[-1])
                     if (np.abs(b1 - b2) < self.config.get("epsilon")).all():
@@ -67,13 +99,13 @@ class GA:
                         print('early stopping initiated.')
                 
                 
-                if generation == 1:
+                if self.generation == 1:
                     plt.axis([1, self.config.get("max_generations"), 0, 0.5])
                     plt.title("RMSE over generations")
                     plt.xlabel("Generations")
                     plt.ylabel("RMSE (m)")
-                elif generation > 1:
-                    plt.plot([generation - 1, generation], 
+                elif self.generation > 1:
+                    plt.plot([self.generation - 1, self.generation], 
                              [self.score[-2], self.score[-1]], color = 'blue')
                     plt.pause(0.05)
                     
@@ -141,15 +173,22 @@ class GA:
     
     def cross_over(self):
         n = self.config.get("population_size")
-        t1 = np.random.normal(0, 0.05, n * 2)
+        m = self.config.get("num_params")
+        mg = self.config.get("max_generations")
+        g = self.generation
+        M = 0.1 * np.exp(-1 * (g / mg))
+        
+        t1 = np.random.normal(0, M, (n * 2, m))
         t2 = np.random.permutation(t1)
-        t3 = t2[0 : int(n/2)]
-        t4 = t2[int(n/2) :n]
+        t3 = t2[0 : int(n/2), :]
+        t4 = t2[int(n/2) : n, :]
         
         P1 = self.population[self.p1_ind, :]
         P2 = self.population[self.p2_ind, :]
-        O1 = P1 + (t3[:, np.newaxis] * (P2 - P1))
-        O2 = P2 + (t4[:, np.newaxis] * (P2 - P1))
+        O1 = P1 + (t3 * (P2 - P1))
+        O2 = P2 + (t4 * (P2 - P1))
+        # O1 = P1 + (t3[:, np.newaxis] * (P2 - P1))
+        # O2 = P2 + (t4[:, np.newaxis] * (P2 - P1))
         
         self.population = np.vstack((O1, O2))
 
@@ -173,8 +212,8 @@ class GA:
         
         # Adaptive mutation
         mg = self.config.get("max_generations")
-        g = self.config.get("generation")
-        M = (mg - g) / mg / 10
+        g = self.generation
+        M = 0.5 * np.exp(-10 * (g / mg))
         mute = np.random.normal(0, M, int(n * m))
         
         q = self.population.reshape(int(n * m), )
