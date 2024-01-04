@@ -84,8 +84,13 @@ class GA:
                 self.calc_fitness()
                 self.generation += 1
                 
-                if self.generation == 10:
-                    print('stop')
+                # if (np.mod(self.generation + 1, 10) == 0) | (self.generation == 0):
+                    # ax = plt.figure().add_subplot(projection='3d')
+                    # x = self.population[:, 0]
+                    # y = self.population[:, 1]
+                    # z = self.population[:, 2]
+                    # ax.scatter(x, y, z, c =  self.config.get("population_size") * ['b'])
+                    # plt.show()
                 
                 
                 
@@ -106,7 +111,7 @@ class GA:
                     plt.ylabel("RMSE (m)")
                 elif self.generation > 1:
                     plt.plot([self.generation - 1, self.generation], 
-                             [self.score[-2], self.score[-1]], color = 'blue')
+                              [self.score[-2], self.score[-1]], color = 'blue')
                     plt.pause(0.05)
                     
                 sleep(0.05)
@@ -136,37 +141,15 @@ class GA:
             self.ind = np.random.permutation(ns)
             
         if self.config.get("selection") == "roulette wheel":
-            self.Fit = self.fitness
-            self.Pop = self.population
-            par, i = self.rw_selection()
-            N = int(self.config.get("population_size") / 2)
-            self.p1_ind = i[:N]
-            self.p2_ind = i[N:]
+            n = self.config.get("population_size")
+            N = int(np.floor(n / 2))
+            Fit = 1 / (self.fitness + self.config.get("epsilon"))
+            probs = Fit / np.sum(Fit)
+            inds = np.random.choice(n, (N, 2), p = probs)
+
+            self.p1_ind = inds[:, 0]
+            self.p2_ind = inds[:, 1]
     
-
-
-    def rw_selection(self):
-        total_fitness = sum(self.Fit)
-        rand_nums = np.random.uniform(0, total_fitness, self.config.get("population_size") )
-        np.random.shuffle(rand_nums)
-        
-        selected_individual, inds = [], []
-        for rand_num in rand_nums:
-            # Initialize variables for cumulative fitness and selected index
-            cumulative_fitness = 0
-            selected_index = 0
-        
-            # Iterate through the population to find the selected index
-            for i, fitness in enumerate(self.Fit):
-                cumulative_fitness += fitness
-                if cumulative_fitness >= rand_num:
-                    selected_index = i
-                    break
-        
-            # Return the selected individual from the population
-            selected_individual.append(self.Pop[selected_index])
-            inds.append(selected_index)
-        return (selected_individual, inds)
 
 
 
@@ -176,7 +159,7 @@ class GA:
         m = self.config.get("num_params")
         mg = self.config.get("max_generations")
         g = self.generation
-        M = 0.1 * np.exp(-1 * (g / mg))
+        M = 0.3 * np.exp(-1.0 * (g / mg))
         
         t1 = np.random.normal(0, M, (n * 2, m))
         t2 = np.random.permutation(t1)
@@ -213,7 +196,7 @@ class GA:
         # Adaptive mutation
         mg = self.config.get("max_generations")
         g = self.generation
-        M = 0.5 * np.exp(-10 * (g / mg))
+        M = 0.2 * np.exp(-1.5 * (g / mg))
         mute = np.random.normal(0, M, int(n * m))
         
         q = self.population.reshape(int(n * m), )

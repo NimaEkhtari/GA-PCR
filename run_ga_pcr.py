@@ -10,7 +10,7 @@ import pdal
 import json
 import GA_real
 from numpy.random import seed
-# seed(100000000)
+seed(0)
 
 # fixed_file = r'D:\Working\BAA\Task 6\6.3\From Craig\cloudb.ply'
 # moving_file = r'D:\Working\BAA\Task 6\6.3\From Craig\clouda.ply'
@@ -91,7 +91,7 @@ config = dict([("population_size", 50),
                ("selection_rate", 1),
                ("cross_over", "two_point"),
                ("mutation_rate", 0.05),
-               ("max_generations", 10),
+               ("max_generations", 40),
                ("epsilon", 1e-9)],)
 
 
