@@ -122,6 +122,7 @@ class GA:
         plt.show()
         self.best = self.best * self.scales
         # self.best = [item  * self.scales for item in self.best]
+        
 
 
     def initialize_population(self):
@@ -161,7 +162,7 @@ class GA:
         m = self.config.get("num_params")
         mg = self.config.get("max_generations")
         g = self.generation
-        M = 0.2 * np.exp(-0.4 * (g / mg))
+        M = 0.1 * np.exp(-0.1 * (g / mg))
         
         t1 = np.random.normal(0, M, (n * 2, m))
         t2 = np.random.permutation(t1)
@@ -198,7 +199,7 @@ class GA:
         # Adaptive mutation
         mg = self.config.get("max_generations")
         g = self.generation
-        M = 0.1 * np.exp(-0.7 * (g / mg))
+        M = 0.15 * np.exp(-1.5 * (g / mg))
         mute = np.random.normal(0, M, int(n * m))
         
         q = self.population.reshape(int(n * m), )
@@ -257,7 +258,7 @@ class GA:
         d = 3               # Dimension of the point cloud
         k = 1               # Num closest points to search for
         
-        kdtree = KDTree(self.fixed)
+        # kdtree = KDTree(self.fixed)
         translations = self.population
         
         rmse = []
@@ -265,12 +266,13 @@ class GA:
             transform = translations[i, :] * self.scales
             temp_moving = self.moving + np.asarray(transform)
             
-            D, I = kdtree.query(temp_moving, k = k)
+            kdtree = KDTree(temp_moving)
+            D, I = kdtree.query(self.fixed, k = k)
             I = np.ravel(I)
             # I = I.reshape(len(I), )
             
             
-            res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
+            res = np.sum((temp_moving[I] - self.fixed) * self.normal[I], axis = 1)
             rmse.append(np.sqrt(np.sum(res**2) / len(I)))
         
         rmse = np.asarray(rmse)

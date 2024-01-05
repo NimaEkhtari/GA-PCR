@@ -10,6 +10,7 @@ import pdal
 import json
 import GA_real
 from numpy.random import seed
+import compare_with_icp
 seed(40)
 
 # fixed_file = r'D:\Working\BAA\Task 6\6.3\From Craig\cloudb.ply'
@@ -80,31 +81,86 @@ fixed  = np.array([X1 - mean_x, Y1 - mean_y, Z1 - mean_z]).T
 moving = np.array([X2 - mean_x, Y2 - mean_y, Z2 - mean_z]).T
 
 
-bounds6 = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]]) * 3
-bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 5
-
-config = dict([("population_size", 40),
-               ("num_params", 3),
-               ("num_bits", 10),
-               ("bounds", bounds3),
-               ("selection", "roulette wheel"),
-               ("selection_rate", 1),
-               ("cross_over", "two_point"),
-               ("mutation_rate", 0.05),
-               ("max_generations", 40),
-               ("epsilon", 1e-9)],)
 
 
-g = GA_real.GA(fixed, Normal, moving, output_file, config)
-g.run_ga()
+
+''' ************************ Run GA registration ************************ '''
+
+# bounds6 = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]]) * 3
+# bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 5
+
+# config = dict([("population_size", 40),
+#                ("num_params", 3),
+#                ("num_bits", 10),
+#                ("bounds", bounds3),
+#                ("selection", "roulette wheel"),
+#                ("selection_rate", 1),
+#                ("cross_over", "two_point"),
+#                ("mutation_rate", 0.05),
+#                ("max_generations", 40),
+#                ("epsilon", 1e-9)],)
 
 
-# fig = plt.figure()
-# plt.plot(g.score)
+# g = GA_real.GA(fixed, Normal, moving, output_file, config)
+# g.run_ga()
 
-ind_best = np.argmin(np.array(g.score))
-print("\n the best solution after {} generations has a fitness score of {} and is as follows:".format(ind_best + 1, np.round(np.min(g.score), 4)))
-print(g.best)
+
+# # fig = plt.figure()
+# # plt.plot(g.score)
+
+# ind_best = np.argmin(np.array(g.score))
+# print("\n the best solution after {} generations has a fitness score of {} and is as follows:".format(ind_best + 1, np.round(np.min(g.score), 4)))
+# print(g.best)
+
+
+
+
+
+
+''' ************************ Run ICP registration ************************ '''
+configs = {
+'bounds' :None,
+'method' : 'translation_only',
+'prop_errors' : True,
+'threshold' : 0,
+'window_size' :50,
+'step_size' : 50,
+'margin': 2,
+'min_points' : 50,
+'converge' : 0.000001,
+'max_iter' : 40,
+'outlier_multiplier' : 5,
+'outlier_percent' : 0.95,
+'output_basename' : 'trans_icp_results'
+}
+
+config = compare_with_icp.icp_configs(configs)
+
+res1, RMSE, Max = compare_with_icp.transicp(moving, fixed, Normal, config)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
