@@ -39,6 +39,7 @@ class GA:
         self.score = []
         self.best = None
         self.generation = 0
+        self.bests = []
         
     
     def run_ga(self):
@@ -82,6 +83,7 @@ class GA:
                     self.carry_best()
                 
                 self.calc_fitness()
+                self.bests.append(self.best)
                 self.generation += 1
                 
                 # if (np.mod(self.generation + 1, 10) == 0) | (self.generation == 0):
@@ -159,7 +161,7 @@ class GA:
         m = self.config.get("num_params")
         mg = self.config.get("max_generations")
         g = self.generation
-        M = 0.3 * np.exp(-1.0 * (g / mg))
+        M = 0.2 * np.exp(-0.4 * (g / mg))
         
         t1 = np.random.normal(0, M, (n * 2, m))
         t2 = np.random.permutation(t1)
@@ -196,7 +198,7 @@ class GA:
         # Adaptive mutation
         mg = self.config.get("max_generations")
         g = self.generation
-        M = 0.2 * np.exp(-1.5 * (g / mg))
+        M = 0.1 * np.exp(-0.7 * (g / mg))
         mute = np.random.normal(0, M, int(n * m))
         
         q = self.population.reshape(int(n * m), )

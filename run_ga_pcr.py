@@ -10,7 +10,7 @@ import pdal
 import json
 import GA_real
 from numpy.random import seed
-seed(0)
+seed(40)
 
 # fixed_file = r'D:\Working\BAA\Task 6\6.3\From Craig\cloudb.ply'
 # moving_file = r'D:\Working\BAA\Task 6\6.3\From Craig\clouda.ply'
@@ -81,9 +81,9 @@ moving = np.array([X2 - mean_x, Y2 - mean_y, Z2 - mean_z]).T
 
 
 bounds6 = np.array([[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1], [-1, 1], [-1, 1], [-1, 1]]) * 3
-bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 3
+bounds3 = np.array([[-1, 1], [-1, 1], [-1, 1]]) * 5
 
-config = dict([("population_size", 50),
+config = dict([("population_size", 40),
                ("num_params", 3),
                ("num_bits", 10),
                ("bounds", bounds3),
