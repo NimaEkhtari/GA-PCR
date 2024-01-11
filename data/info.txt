@@ -1,5 +1,14 @@
 The simulated displacements are:
 
+for fixed.las and moving.las:
 ShiftX =  0.60
 ShiftY = -0.30
 ShiftZ =  0.20
+
+
+for fixed.laz and moving.laz:
+ShiftX =  1.60
+ShiftY = -0.70
+ShiftZ =  0.50
+
+The file test.laz is used for investigating initial estimate issue with icp

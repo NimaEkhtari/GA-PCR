@@ -162,7 +162,7 @@ class GA:
         m = self.config.get("num_params")
         mg = self.config.get("max_generations")
         g = self.generation
-        M = 0.1 * np.exp(-0.1 * (g / mg))
+        M = 0.4 * np.exp(-4 * (g / mg))
         
         t1 = np.random.normal(0, M, (n * 2, m))
         t2 = np.random.permutation(t1)
@@ -199,7 +199,7 @@ class GA:
         # Adaptive mutation
         mg = self.config.get("max_generations")
         g = self.generation
-        M = 0.15 * np.exp(-1.5 * (g / mg))
+        M = 0.5 * np.exp(-1.5 * (g / mg))
         mute = np.random.normal(0, M, int(n * m))
         
         q = self.population.reshape(int(n * m), )

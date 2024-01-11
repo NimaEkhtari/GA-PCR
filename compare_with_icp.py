@@ -93,7 +93,7 @@ def transicp(moving, fixed, fixed_normal, conf):
     NNormal = np.squeeze(fixed_normal[I, :])
     resi = np.sum(Vec_Diff2 * NNormal, axis = 1)
 
-    outlier = np.sum(np.abs(resi) > 0.02)
+    # outlier = np.sum(np.abs(resi) > 0.02)
     wsquared = np.sum(resi ** 2)
     RMSE = math.sqrt(wsquared / len(X1))
     Max = np.amax(np.fabs(misc))
