@@ -6,7 +6,7 @@ ShiftY = -0.30
 ShiftZ =  0.20
 
 
-for fixed.laz and moving.laz:
+for fixed3.laz and moving3.laz:
 ShiftX =  1.60
 ShiftY = -0.70
 ShiftZ =  0.50

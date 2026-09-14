@@ -8,7 +8,7 @@ This code is the original GA code that works with real number
 
 
 import numpy as np
-import faiss
+# import faiss
 from tqdm import tqdm
 from time import sleep
 from sklearn.neighbors import KDTree
@@ -106,17 +106,18 @@ class GA:
                         print('early stopping initiated.')
                 
                 
-                if self.generation == 1:
-                    plt.axis([1, self.config.get("max_generations"), 0, 0.5])
-                    plt.title("RMSE over generations")
-                    plt.xlabel("Generations")
-                    plt.ylabel("RMSE (m)")
-                elif self.generation > 1:
-                    plt.plot([self.generation - 1, self.generation], 
-                              [self.score[-2], self.score[-1]], color = 'blue')
-                    plt.pause(0.05)
-                    
-                sleep(0.05)
+                if self.config.get("plot_rmse"):
+                    if self.generation == 1:
+                        plt.axis([1, self.config.get("max_generations"), 0, 0.5])
+                        plt.title("RMSE over generations")
+                        plt.xlabel("Generations")
+                        plt.ylabel("RMSE (m)")
+                    elif self.generation > 1:
+                        plt.plot([self.generation - 1, self.generation], 
+                                  [self.score[-2], self.score[-1]], color = 'blue')
+                        plt.pause(0.05)
+                        
+                    sleep(0.05)
                 pbar.update(1)
         
         plt.show()
@@ -266,13 +267,13 @@ class GA:
             transform = translations[i, :] * self.scales
             temp_moving = self.moving + np.asarray(transform)
             
-            kdtree = KDTree(temp_moving)
-            D, I = kdtree.query(self.fixed, k = k)
+            kdtree = KDTree(self.fixed)
+            D, I = kdtree.query(temp_moving, k = k)
             I = np.ravel(I)
             # I = I.reshape(len(I), )
             
             
-            res = np.sum((temp_moving[I] - self.fixed) * self.normal[I], axis = 1)
+            res = np.sum((temp_moving - self.fixed[I]) * self.normal[I], axis = 1)
             rmse.append(np.sqrt(np.sum(res**2) / len(I)))
         
         rmse = np.asarray(rmse)
@@ -288,12 +289,14 @@ class GA:
         d = 3               # Dimension of the point cloud
         k = 1               # Num closest points to search for
         
-        index = faiss.IndexFlatL2(d)
-        index.add(self.fixed)
+        # index = faiss.IndexFlatL2(d)
+        # index.add(self.fixed)
         
-        D, I = index.search(self.moving, k)
-        I = I.reshape(len(I), )
+        # D, I = index.search(self.moving, k)
+        # I = I.reshape(len(I), )
 
+        kdtree = KDTree(self.fixed)
+        D, I = kdtree.query(self.moving, k = k)
 
         self.get_transforms()
         rmse = []

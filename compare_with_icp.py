@@ -7,7 +7,7 @@ Created on Fri Jan  5 10:32:35 2024
 
 
 import numpy as np
-import faiss
+# import faiss
 import pdal
 import json
 import argparse
@@ -48,35 +48,43 @@ def transicp(moving, fixed, fixed_normal, conf):
     X1 = moving - means
     X2 = fixed - means
        
-    index = faiss.IndexFlatL2(3)
-    index.add(X2)
+    # index = faiss.IndexFlatL2(3)
+    # index.add(X2)
+    
+    kdtree = KDTree(X2)
+    
     
     while loop == True:
         #Set Up The Point Indexing - Needs to Be Updated Every Iteration
         search_pts = X1 + icp_trans
         
-        D, I = index.search(search_pts, k)
-        misc = np.zeros((len(X1),1)).astype('float32')
-        A = np.zeros((len(X1),3)).astype('float32')
-        Normal = np.zeros((3,1)).astype('float32')
-        for i in range(len(X1)):
-            Normal = fixed_normal[I[i,0], :]
+        # D, I = index.search(search_pts, k)
+        D, I = kdtree.query(search_pts, k = k)
+        # misc = np.zeros((len(X1),1)).astype('float32')
+        # A = np.zeros((len(X1),3)).astype('float32')
+        # Normal = np.zeros((3,1)).astype('float32')
+        # for i in range(len(X1)):
+        #     #Normal = fixed_normal[I[i,0], :]
+        Normal = fixed_normal[I, :]
             
-            Vec_Diff = (search_pts[i, :] - X2[I[i,0], :])
-            Vec_DiffT = Vec_Diff.transpose()
-            misc[i, :] = Vec_DiffT.dot(Normal)
-            A[i, 0:3] = fixed_normal[I[i,0], :]
+        # Vec_Diff = (search_pts[i, :] - X2[I[i,0], :])
+        Vec_Diff = (search_pts - X2[I, :])
+        # Vec_DiffT = Vec_Diff.transpose()
+        misc = np.sum(Vec_Diff * Normal, axis = 1)
+        # misc[i, :] = Vec_DiffT.dot(Normal)
+        # A[i, 0:3] = fixed_normal[I[i,0], :]
+        # A[i, 0:3] = fixed_normal[I, :]
             
-
+        A = Normal
         AT = A.transpose()
         ATA = AT.dot(A)
         N = np.linalg.inv(ATA)
         U = AT.dot(misc)
         delcap = -N.dot(U)
         # offset = np.linalg.norm(delcap)
-        icp_trans[0] = icp_trans[0] + delcap[0,0]
-        icp_trans[1] = icp_trans[1] + delcap[1,0]
-        icp_trans[2] = icp_trans[2] + delcap[2,0]
+        icp_trans[0] = icp_trans[0] + delcap[0]
+        icp_trans[1] = icp_trans[1] + delcap[1]
+        icp_trans[2] = icp_trans[2] + delcap[2]
         
         # print(icp_trans)
         count = count + 1

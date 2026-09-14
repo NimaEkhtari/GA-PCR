@@ -11,15 +11,28 @@ import json
 import GA_real
 from numpy.random import seed
 import compare_with_icp
-# seed(40)
 
-# fixed_file = r'D:\Working\BAA\Task 6\6.3\From Craig\cloudb.ply'
-# moving_file = r'D:\Working\BAA\Task 6\6.3\From Craig\clouda.ply'
-# output_file = r'D:\Working\BAA\Task 6\6.3\From Craig\output.txt'
 
-fixed_file =  r'./data/fixed3.laz'
-moving_file = r'./data/moving3.laz'
-output_file = r'./data/output.txt'
+import geopandas as gpd
+from shapely.geometry import Point
+
+
+
+WS = 100
+SS = 50
+BOUNDS = [445750, 448550, 3953600, 3957000]
+
+
+shapefile_path  = r'D:\Working\Ridgecrest\Processing 2024\Polygons_utm.shp'
+polygons = gpd.read_file(shapefile_path)
+poly_index = 0      # 0 for westr, 1 for east
+
+
+
+fixed_file =  r'D:\Working\Ridgecrest\Processing 2024\ICP\roi\ncalm12_roi_west.las' #r'./data/fixed3.laz'
+moving_file = r'D:\Working\Ridgecrest\Processing 2024\ICP\roi\sgm_wgs84_heights12_roi_west.las' #r'./data/moving3.laz'
+output_file = r'D:\Working\Ridgecrest\Processing 2024\ICP\ga\west_{}_{}.txt'.format(WS, SS) #r'./data/output.txt'
+
 
 
 
@@ -72,7 +85,7 @@ Z2 = view2['Z']
 
 
 
-# Compute X1 Point Cloud Centroid To Remove It
+
 
 
 
@@ -115,14 +128,14 @@ config = dict([("plot_rmse", False),
 
 # ''' ************************ Run ICP registration ************************ '''
 configs_icp = {
-'bounds' :[273100, 273600, 3289300, 3289800],
+'bounds' : BOUNDS,
 'method' : 'translation_only',
 'prop_errors' : True,
 'threshold' : 0,
-'window_size' :25,
-'step_size' : 25,
+'window_size' : WS,
+'step_size' : SS,
 'margin': 2,
-'min_points' : 50,
+'min_points' : 200,
 'converge' : 0.000001,
 'max_iter' : 40,
 'outlier_multiplier' : 5,
@@ -144,10 +157,10 @@ config_icp = compare_with_icp.icp_configs(configs_icp)
 
 
 
-window_size = 25
-step_size = 25
+window_size = WS
+step_size = SS
 margin = 2
-min_points = 50
+min_points = 200
 
 # Variables to hold the ICP vector origins (X, Y) and displacements (dx, dy)
 X = []
@@ -159,61 +172,60 @@ DX, DY, DZ = [], [], []
 RMSEi, RMSEg = [], []
 prop_err = []
 
-B = [701650, 702100, 4006400, 4006500]
+B = BOUNDS # [446650, 446750, 3955800, 3955900]
 # B = [273100, 273600, 3289300, 3289800]
 iii = 0
 for y in range(B[2], B[3], step_size):
     dxr, dyr, dzr = [], [], []
     for x in range(B[0], B[1], step_size):
-        iii += 1
-        # if iii in (8, 9, 10):
-        #     print('stop')
-        indx = (x <= X1) & (X1 <= (x + window_size))
-        indy = (y <= Y1) & (Y1 <= (y + window_size))
-        ind = indx & indy
-        Xa = np.stack((X1[ind], Y1[ind], Z1[ind]), axis = 1)
-        Na = Normal[ind, :]
-        
-        indx = (x <= X2) & (X2 <= (x + window_size))
-        indy = (y <= Y2) & (Y2 <= (y + window_size))
-        ind = indx & indy
-        Xb = np.stack((X2[ind], Y2[ind], Z2[ind]), axis = 1)
-        
-        
-        mean_x, mean_y, mean_z = np.mean(X1), np.mean(Y1), np.mean(Z1)
-        
-        Xa = Xa - np.stack((mean_x, mean_y, mean_z))
-        Xb = Xb - np.stack((mean_x, mean_y, mean_z))
-        
-        
-        if ((len(Xa) < min_points) | (len(Xb) < min_points)):
-            dxr.append(0)
-            dyr.append(0)
-            dzr.append(0)
-            continue
-        
-        
-        ''' ---- for icp ----- '''
-        res, rmse, max_residual = compare_with_icp.transicp(Xb, Xa, Na, config_icp)
-        dxi.append(res[0])
-        dyi.append(res[1])
-        dzi.append(res[2])
-        RMSEi.append(rmse)
-        
-        
-        ''' ---- for ga ----- '''
-        g = GA_real.GA(Xa, Na, Xb, output_file, config)
-        g.run_ga()
-        dxg.append(g.best[0])
-        dyg.append(g.best[1])
-        dzg.append(g.best[2])
-        RMSEg.append(g.score[-1])
-
-
-        X.append(x + step_size/2)
-        Y.append(y + step_size/2)
+        point = Point(x, y)
+        poly = polygons.iloc[poly_index].geometry
+        if poly.contains(point):
+            indx = (x <= X1) & (X1 <= (x + window_size))
+            indy = (y <= Y1) & (Y1 <= (y + window_size))
+            ind = indx & indy
+            Xa = np.stack((X1[ind], Y1[ind], Z1[ind]), axis = 1)
+            Na = Normal[ind, :]
             
-        print(iii)   
+            indx = (x <= X2) & (X2 <= (x + window_size))
+            indy = (y <= Y2) & (Y2 <= (y + window_size))
+            ind = indx & indy
+            Xb = np.stack((X2[ind], Y2[ind], Z2[ind]), axis = 1)
+            
+            
+            mean_x, mean_y, mean_z = np.mean(X1), np.mean(Y1), np.mean(Z1)
+            
+            Xa = Xa - np.stack((mean_x, mean_y, mean_z))
+            Xb = Xb - np.stack((mean_x, mean_y, mean_z))
+            
+            
+            if ((len(Xa) < min_points) | (len(Xb) < min_points)):
+                dxr.append(0)
+                dyr.append(0)
+                dzr.append(0)
+                continue
+            
+            
+            ''' ---- for icp ----- '''
+            res, rmse, max_residual = compare_with_icp.transicp(Xb, Xa, Na, config_icp)
+            dxi.append(res[0])
+            dyi.append(res[1])
+            dzi.append(res[2])
+            RMSEi.append(rmse)
+            
+            
+            ''' ---- for ga ----- '''
+            g = GA_real.GA(Xa, Na, Xb, output_file, config)
+            g.run_ga()
+            dxg.append(g.best[0])
+            dyg.append(g.best[1])
+            dzg.append(g.best[2])
+            RMSEg.append(g.score[-1])
+    
+    
+            X.append(x + step_size/2)
+            Y.append(y + step_size/2)
+
     
 
 ga_roi1 = np.stack((dxg, dyg, dzg, RMSEg), axis = 1)
@@ -224,8 +236,8 @@ icp_roi1 = np.stack((dxi, dyi, dzi, RMSEi), axis = 1)
 print(np.mean(icp_roi1, axis = 0))
 print(np.std(icp_roi1, axis = 0))
 
-np.savetxt('ga_2.txt', ga_roi1, fmt='%3.6e', delimiter='\t')
-np.savetxt('icp_2.txt', icp_roi1, fmt='%3.6e', delimiter='\t')
+np.savetxt(r'D:\Working\Ridgecrest\Processing 2024\ICP\ga\ga_west_{}_{}.txt'.format(WS, SS), ga_roi1, fmt='%3.6e', delimiter='\t')
+np.savetxt(r'D:\Working\Ridgecrest\Processing 2024\ICP\ga\icp_west_{}_{}.txt'.format(WS, SS), icp_roi1, fmt='%3.6e', delimiter='\t')
 
 
 
